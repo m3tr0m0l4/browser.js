@@ -1,4 +1,4 @@
-import { MethodsDefinition, RpcHelper } from "@mercuryworkshop/rpc";
+import { type MethodsDefinition, RpcHelper } from "@mercuryworkshop/rpc";
 import type * as ScramjetGlobal from "@mercuryworkshop/scramjet";
 
 declare const $scramjet: typeof ScramjetGlobal;
@@ -11,11 +11,11 @@ declare const $scramjet: typeof ScramjetGlobal;
 // 	CookieJar,
 // } = $scramjet;
 
-import { Controllerbound, SWbound } from "./types";
+import type { Controllerbound, SWbound } from "./types";
 import LibcurlClient from "@mercuryworkshop/libcurl-transport";
 import {
 	BareClient,
-	BareResponseFetch,
+	type BareResponseFetch,
 } from "@mercuryworkshop/bare-mux-custom";
 
 let lc = new LibcurlClient({
@@ -37,13 +37,17 @@ fetch("/scramjet/scramjet.wasm.wasm").then(async (resp) => {
 });
 
 export const config: Config = {
-	prefix: "/~/sj",
-	virtualWasmPath: "/scramjet.wasm.js",
+	prefix: "/~/sj/",
+	virtualWasmPath: "scramjet.wasm.js",
 	scramjetPath: "/scramjet/scramjet.js",
 	wasmPath: "/scramjet/scramjet.wasm.wasm",
 };
 
 const cfg = {
+	flags: {
+		...$scramjet.defaultConfig.flags,
+		allowFailedIntercepts: true,
+	},
 	maskedfiles: ["inject.js", "scramjet.wasm.js"],
 };
 
@@ -87,12 +91,7 @@ export class Controller {
 				const frame = this.frames.find((f) => path.startsWith(f.prefix));
 				if (!frame) throw new Error("No frame found for request");
 
-				if (
-					path.startsWith(
-						frame.prefix.substring(0, frame.prefix.length - 1) +
-							config.virtualWasmPath
-					)
-				) {
+				if (path === frame.prefix + config.virtualWasmPath) {
 					console.log("???");
 					if (!wasmPayload) {
 						const resp = await fetch(config.wasmPath);
@@ -168,7 +167,7 @@ export class Controller {
 
 	constructor(serviceworker: ServiceWorker) {
 		this.id = makeId();
-		this.prefix = config.prefix + "/" + this.id;
+		this.prefix = config.prefix + this.id + "/";
 
 		this.ready = new Promise<void>((resolve) => {
 			this.readyResolve = resolve;
@@ -191,7 +190,7 @@ export class Controller {
 		serviceworker.postMessage(
 			{
 				$controller$init: {
-					prefix: config.prefix + "/" + this.id,
+					prefix: config.prefix + this.id,
 					id: this.id,
 				},
 			},
@@ -220,10 +219,7 @@ function yieldGetInjectScripts(
 	return function getInjectScripts(meta, handler, script) {
 		return [
 			script(config.scramjetPath),
-			script(
-				prefix.href.substring(0, prefix.href.length - 1) +
-					config.virtualWasmPath
-			),
+			script(prefix.href + config.virtualWasmPath),
 			script(
 				"data:text/javascript;base64," +
 					btoa(`
@@ -293,8 +289,6 @@ class Frame {
 	id: string;
 	prefix: string;
 
-	getInjectScripts(meta, handler, script) {}
-
 	get context() {
 		let sjcfg = {
 			...$scramjet.defaultConfig,
@@ -311,22 +305,11 @@ class Frame {
 					{ ...$scramjet.defaultConfig, ...cfg },
 					new URL(this.prefix, location.href)
 				),
-				getWorkerInjectScripts: (type: string) => {
-					const module = type === "module";
+				getWorkerInjectScripts: (meta, type, script) => {
 					let str = "";
-					const script = (script: string) => {
-						if (module) {
-							str += `import "${script}"\n`;
-						} else {
-							str += `importScripts("${script}");\n`;
-						}
-					};
 
-					script(config.scramjetPath);
-					script(
-						this.prefix.substring(0, this.prefix.length - 1) +
-							config.virtualWasmPath
-					);
+					str += script(config.scramjetPath);
+					str += script(this.prefix + config.virtualWasmPath);
 					str += `
 					(()=>{
 						const { ScramjetClient, CookieJar, setWasm } = $scramjet;
@@ -371,7 +354,7 @@ class Frame {
 		public element: HTMLIFrameElement
 	) {
 		this.id = makeId();
-		this.prefix = this.controller.prefix + "/" + this.id + "/";
+		this.prefix = this.controller.prefix + this.id + "/";
 
 		this.fetchHandler = new $scramjet.ScramjetFetchHandler({
 			crossOriginIsolated: self.crossOriginIsolated,
