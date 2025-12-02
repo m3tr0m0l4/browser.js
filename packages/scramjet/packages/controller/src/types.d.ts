@@ -35,6 +35,7 @@ export type Controllerbound = {
 			cookie: string;
 		},
 	];
+	initRemoteTransport: [MessagePort];
 };
 
 export type SWbound = {
@@ -45,3 +46,49 @@ export type SWbound = {
 		},
 	];
 };
+
+export type TransportToController = {
+	request: [
+		{
+			remote: string;
+			method: string;
+			body: BodyInit | null;
+			headers: BareHeaders;
+			// signal: AbortSignal | undefined
+		},
+		TransferrableResponse,
+	];
+	connect: [
+		{
+			url: string;
+			protocols: string[];
+			requestHeaders: BareHeaders;
+			port: MessagePort;
+		},
+		(
+			| {
+					result: "success";
+					protocol: string;
+			  }
+			| {
+					result: "failure";
+					error: string;
+			  }
+		),
+	];
+};
+
+export type ControllerToTransport = {
+	ready: [];
+};
+export type WebSocketData = string | ArrayBuffer | Blob;
+export type WebSocketMessage =
+	| {
+			type: "data";
+			data: WebSocketData;
+	  }
+	| {
+			type: "close";
+			code: number;
+			reason: string;
+	  };
