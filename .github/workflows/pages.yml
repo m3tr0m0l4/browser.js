@@ -63,8 +63,8 @@ jobs:
       - name: Build chrome frontend
         env:
           VITE_BASE_PATH: /browser.js/
-          VITE_WISP_URL: wss://YOUR-WISP.onrender.com/
-          VITE_ISOLATION_ORIGIN: https://YOUR-ISO.onrender.com
+          VITE_WISP_URL: wss://browser-js-wisp.onrender.com
+          VITE_ISOLATION_ORIGIN: https://example.com
         run: pnpm build:chrome
 
       - name: Upload Pages artifact
