@@ -17,29 +17,55 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - uses: pnpm/action-setup@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "pnpm"
 
-      - run: pnpm install
-      - run: pnpm build:dreamland
-      - run: pnpm --dir packages/scramjet/packages/core run rewriter:build
-      - run: pnpm --dir packages/scramjet/packages/core build
-      - run: pnpm build:chrome
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Dreamland
+        run: pnpm build:dreamland
+
+      - name: Install Rust nightly with wasm target
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binaryen
+          cargo install --force wasm-bindgen-cli --version 0.2.105
+          cargo install --force wasm-snip
+
+      - name: Build scramjet wasm rewriter
+        run: pnpm --dir packages/scramjet/packages/core run rewriter:build
+
+      - name: Build scramjet core package
+        run: pnpm --dir packages/scramjet/packages/core build
+
+      - name: Build chrome frontend
         env:
           VITE_BASE_PATH: /browser.js/
-          VITE_WISP_URL: wss://REPLACE-WISP.onrender.com/
-          VITE_ISOLATION_ORIGIN: https://REPLACE-ISO.onrender.com
+          VITE_WISP_URL: wss://YOUR-WISP.onrender.com/
+          VITE_ISOLATION_ORIGIN: https://YOUR-ISO.onrender.com
+        run: pnpm build:chrome
 
-      - uses: actions/upload-pages-artifact@v3
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./packages/chrome/dist
 
@@ -49,6 +75,8 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
