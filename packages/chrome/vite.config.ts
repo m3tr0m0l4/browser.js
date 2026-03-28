@@ -5,6 +5,7 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 import { cssHmrPlugin, ssr, jsxPlugin } from "dreamland/vite";
 
 export default defineConfig({
+	base: process.env.VITE_BASE_PATH || "/",
 	plugins: [
 		process.env.VITE_SINGLEFILE ? viteSingleFile() : null,
 		cssHmrPlugin(),
@@ -21,10 +22,6 @@ export default defineConfig({
 		// 			src: "../inject/dist/inject.js",
 		// 			dest: ".",
 		// 		},
-		// 		// {
-		// 		// 	src: "../chii/public/*",
-		// 		// 	dest: "chii",
-		// 		// },
 		// 	],
 		// }),
 	],

@@ -1,0 +1,54 @@
+name: Deploy browser.js frontend to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - run: pnpm install
+      - run: pnpm build:dreamland
+      - run: pnpm --dir packages/scramjet/packages/core run rewriter:build
+      - run: pnpm --dir packages/scramjet/packages/core build
+      - run: pnpm build:chrome
+        env:
+          VITE_BASE_PATH: /browser.js/
+          VITE_WISP_URL: wss://REPLACE-WISP.onrender.com/
+          VITE_ISOLATION_ORIGIN: https://REPLACE-ISO.onrender.com
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./packages/chrome/dist
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
