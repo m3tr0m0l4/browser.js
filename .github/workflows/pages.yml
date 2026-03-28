@@ -57,6 +57,9 @@ jobs:
       - name: Build scramjet core package
         run: pnpm --dir packages/scramjet/packages/core build
 
+      - name: Build inject bundle
+        run: pnpm exec rspack build --config packages/inject/rspack.config.ts
+
       - name: Build chrome frontend
         env:
           VITE_BASE_PATH: /browser.js/
