@@ -1,0 +1,8 @@
+{
+  "name": "browserjs-wisp-server",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@mercuryworkshop/wisp-js": "^0.4.0"
+  }
+}
